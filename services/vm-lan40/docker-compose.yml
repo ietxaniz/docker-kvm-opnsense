@@ -1,0 +1,16 @@
+services:
+  web:
+    image: nginx:stable-alpine3.21
+    container_name: kvm-shared-nginx
+    ports:
+      - 80:80
+    volumes:
+      - ./nginx/conf:/etc/nginx/conf.d
+      - ./nginx/web:/var/www/html
+networks:
+  sharing-sample-network:
+    name: sharing-sample-network
+    ipam:
+      config:
+        - subnet: 172.19.1.192/28
+          gateway: 172.19.1.193

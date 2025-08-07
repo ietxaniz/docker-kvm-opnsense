@@ -1,0 +1,30 @@
+services:
+  samba:
+    image: dockurr/samba
+    container_name: kvm-shared-samba
+    environment:
+      NAME: ${SAMBA_NAME}
+      USER: ${SAMBA_USER}
+      PASS: ${SAMBA_PASS}
+    ports:
+      - 445:445
+    volumes:
+      - ${SAMBA_MOUNT}:/storage
+    restart: always
+    networks:
+      - kvm-shared-network
+  web:
+    image: nginx:stable-alpine3.21
+    container_name: kvm-shared-nginx
+    ports:
+      - ${NGINX_PORT}:80
+    volumes:
+      - ./nginx/conf:/etc/nginx/conf.d
+      - ./nginx/web:/var/www/html
+networks:
+  kvm-shared-network:
+    name: kvm-shared-network
+    ipam:
+      config:
+        - subnet: 172.19.1.192/28
+          gateway: 172.19.1.193
