@@ -1,6 +1,8 @@
 # Multi-Segment VPN Homelab with Debian, KVM, and OPNsense
 
-This project documents a modular, real-world homelab architecture built on Linux. It combines KVM virtual machines, host-exposed Docker services, OPNsense firewall/routing, and GPU passthrough — all tied together through segmented virtual LANs with various VPN configurations.
+This project documents a modular, real-world homelab architecture built on Linux. It combines KVM virtual machines, host-exposed Docker services, OPNsense firewall/routing — all tied together through segmented virtual LANs with various VPN configurations.
+
+![](./figs/architecture.drawio.svg)
 
 ## 🔧 Stack Overview
 
@@ -8,7 +10,6 @@ This project documents a modular, real-world homelab architecture built on Linux
 - **Virtualization**: KVM / QEMU + libvirt
 - **Routing & Firewall**: OPNsense VM with multiple virtual interfaces
 - **Containerization**: Docker on host
-- **GPU Passthrough**: Windows VM with discrete GPU for gaming/engineering
 
 ---
 
@@ -16,10 +17,7 @@ This project documents a modular, real-world homelab architecture built on Linux
 
 - **CPU**: AMD 8700G *(host runs on iGPU)*
 - **RAM**: 128 GB *(32 GB likely sufficient)*
-- **GPU**: NVIDIA 4060 Ti *(passed through to Windows VM)*
-
-> 💡 **Tip**: If using an iGPU, do **not** reserve more than **4 GB of VRAM** in BIOS for system stability.  
-> [See troubleshooting notes →](docs/troubleshooting.md#igpu-vram-over-allocation)
+- **GPU**: NVIDIA 4060 Ti
 
 ---
 
@@ -28,8 +26,8 @@ This project documents a modular, real-world homelab architecture built on Linux
 | Section | Description |
 |--------|-------------|
 | [📐 Architecture Overview](docs/architecture.md) | LAN design, VPN routing paths, interface roles |
-| [🌐 Network Setup](docs/networking.md) | Creating bridges, IP ranges, NIC config |
-| [🧱 Installing KVM and OPNsense](docs/tools-install.md) | Base VM setup, WAN/LAN mapping |
+| [🌐 Network Setup](docs/network-setup.md) | Creating bridges, IP ranges, NIC config |
+| [🧱 Installing KVM and OPNsense](docs/tools-installation.md) | Base VM setup, WAN/LAN mapping |
 | [📁 File Sharing & Host Services](docs/file-sharing-and-host-services.md) | Expose containers to segmented LANs |
 | [🔌 LAN10](docs/lan10.md) | Direct internet access |
 | [🔌 LAN20](docs/lan20.md) | VPN with port forwarding *(WireGuard)* |
@@ -39,7 +37,6 @@ This project documents a modular, real-world homelab architecture built on Linux
 | [🔌 LAN99](docs/lan99.md) | Management network security |
 | [⚙️ VM Startup Orchestration](docs/vm-startup.md) | Delay VMs until OPNsense is fully online |
 | [🛠️ Troubleshooting](docs/troubleshooting.md) | iGPU VRAM, bridge issues, network quirks |
-| [📓 Naming Conventions](docs/naming.md) | IPs, bridge names, VM roles, aliases |
 
 ---
 
@@ -48,12 +45,6 @@ This project documents a modular, real-world homelab architecture built on Linux
 This setup solves the common problem of sharing files and host-based services with virtual machines — not by using VirtualBox-style folder mounts, but by exposing Docker containers as proper network services, routed and secured through OPNsense.
 
 > 💡 Example: Run a Samba container that shares a host folder, and access it from any VM as if it were a NAS. OPNsense can control which VMs see it, log access, and isolate or expose it as needed — just like with real infrastructure.
-
-Typical use cases include:
-
-* Replacing shared folders with Samba or NFS containers
-* Running internal services (e.g. Jellyfin, nginx, local DNS) without extra VMs
-* Keeping storage and logic on the host, while treating access as networked and firewall-controlled
 
 All containers operate in a dedicated IP space (e.g. `172.16.0.0/12`) and are reachable from VMs via static routes and firewall rules defined in OPNsense.
 
@@ -110,18 +101,11 @@ Suggestions, fixes, or improvements are welcome — feel free to:
 
 ---
 
-## 🚀 Coming Soon
-
-- 🎮 [GPU Passthrough Setup](docs/gpu-passthrough.md)  
-  Virtualizing Windows with routed GPU access — gaming, CAD, or remote workloads
-
----
-
 ## 📥 Get Started
 
 Clone the repo and begin with the [Architecture Overview](docs/architecture.md):
 
 ```bash
-git clone https://github.com/your-user/homelab-vpn-router
-cd homelab-vpn-router
+git clone https://github.com/ietxaniz/docker-kvm-opnsense
+cd docker-kvm-opnsense
 ```

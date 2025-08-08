@@ -49,8 +49,6 @@ inigo@deb12-gnome-testing:~$ ip addr show enp1s0
        valid_lft forever preferred_lft forever
 ```
 
-So I need to store the mac address, and I will annotate it in the document `network-data.md`. (you should have your own table to continue with this tutorial)
-
 | Parameter                   | Value                              |
 | --------------------------- | ---------------------------------- |
 | host-connection-name        | Wired connection 1                 |
@@ -110,7 +108,6 @@ Run these diagnostic commands to confirm the bridge is working properly:
 echo "=== BRIDGE DIAGNOSTICS ==="
 ping -c 2 8.8.8.8
 ip addr show br0
-/usr/sbin/brctl show br0
 echo "br0 carrier: $(cat /sys/class/net/br0/carrier 2>/dev/null || echo 'unknown')"
 echo "enp1s0 carrier: $(cat /sys/class/net/enp1s0/carrier 2>/dev/null || echo 'unknown')"
 nmcli device status | grep -E "(br0|enp1s0)"
@@ -121,7 +118,6 @@ After successful bridge creation, you should see:
 
 - Succesful ping response to 8.8.8.8
 - `br0` interface with an IP address in the 192.168.1.0/24 range (same as your original enp1s0)
-- `brctl show br0` displaying enp1s0 as a member of the bridge
 - Both `br0` and `enp1s0` showing as "connected" in nmcli device status.
 
 ## Create br-mgmt Bridge
@@ -150,7 +146,6 @@ Run these diagnostic commands to confirm the br-mgmt bridge is working properly:
 echo "=== BR-MGMT DIAGNOSTICS ==="
 ping -c 2 192.168.99.15
 ip addr show br-mgmt
-/usr/sbin/brctl show br-mgmt
 echo "br-mgmt carrier: $(cat /sys/class/net/br-mgmt/carrier 2>/dev/null || echo 'unknown')"
 nmcli device status | grep br-mgmt
 nmcli connection show | grep br-mgmt
@@ -163,7 +158,6 @@ After successful br-mgmt creation, you should see:
 
 - **Successful ping response** to 192.168.99.15 (the bridge can ping itself)
 - **br-mgmt interface** with IP address 192.168.99.15/24 and state UP
-- **brctl show br-mgmt** displaying an empty bridge (no interfaces attached yet)
 - **br-mgmt carrier: unknown** (normal for empty bridge with no connected devices)
 - **nmcli device status** showing br-mgmt as "connected"
 - **nmcli connection show** showing br-mgmt bridge connection
