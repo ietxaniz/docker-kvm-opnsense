@@ -20,6 +20,35 @@ Before configuring LAN20, ensure you have:
 
 For this guide, we'll use a WireGuard configuration that routes through a VPN provider with port forwarding capabilities. The exact configuration details will vary by provider, but the OPNsense setup process should be consistent across different VPN services.
 
+From the configuration file you should file next table:
+
+| Param    | Value | Description |
+| -------- | ----- | ----------- |
+| $NAME$   |       | Connection name. I use vpn provider followed by a number |
+| $KEY$    |       | private key |
+| $PK$     |       | public key  |
+| $ADDR$   |       | address     |
+| $DNS$    |       | dns servers provided by vpn provider  |
+| $ADDRG$  |       | "gateway address, different from $ADDR$ (typically $ADDR$ minus 1, e.g., if $ADDR$ is 172.31.61.210, use 172.31.61.209)" |
+| $PPK$    |       | peer public key |
+| $PIPS$   |       | peer allowed ips - should be 0.0.0.0/0|
+| $PURL$   |       | peer endpoint url |
+| $PPORT$  |       | peer endpoint port |
+| $FPORT$  |       | forwarded port |
+
+If public key is not included in the configuration file (some vpn providers may not include it) it can be computed with next instruction without leaving any traces of the private key on bash shell:
+
+```bash
+(umask 077; echo "<base64-private-key>" | wg pubkey)
+history -d $((HISTCMD - 1))
+```
+
+If `wg command not found` is answered you need to install wireguard and repeat the previous command:
+
+```bash
+sudo apt update && sudo apt install wireguard
+```
+
 ## Assigning the Interface
 
 Navigate to `Interfaces - Assignments` and add a new assignment selecting `vtnet3` from the dropdown and adding `LAN20` as description. Next, click on the newly created interface `LAN20`, check **Enable Interface**, select **Static IPv4** as `IPv4 Configuration Type`, set the `IPv4 address` to **192.168.20.1/24**, click `Save`, and then `Apply changes`.
@@ -36,28 +65,15 @@ For complete privacy and to prevent DNS leaks, LAN20 must use DNS servers provid
 
 VPN provider DNS servers ensure that domain name resolution occurs within the encrypted tunnel and exits through the same geographic location as your traffic. This maintains consistency between your apparent location and your DNS queries, preventing correlation attacks and ensuring that geo-restricted content works correctly.
 
-Finally, go to `Services - Dnsmasq DNS & DHCP - DHCP options`, click the red plus icon, and set: `Type: set`, `Option: dns-server [6]`, `Option6: None`, `Interface: LAN20`, `Tag: Nothing selected`, `Value: [your VPN provider DNS servers, comma-separated]`, `Force: unchecked`, `Description: LAN20 DNS = VPN Provider`, then click `Save` and `Apply`.
-
-## WireGuard Configuration
-
-The WireGuard setup involves creating a local instance (client configuration), adding a peer (server configuration), and assigning the tunnel as an OPNsense interface for routing. WireGuard differentiates all this three concepts as this allows more complex scenarios than the one we are setting here. For example in `LAN30` we will need just one instance to be able to connecte to different servers (peers) through several defined tunnels (only being one tunnel active at each moment).
+Finally, go to `Services - Dnsmasq DNS & DHCP - DHCP options`, click the red plus icon, and set: `Type: set`, `Option: dns-server [6]`, `Option6: None`, `Interface: LAN20`, `Tag: Nothing selected`, `Value: $DNS$`, `Force: unchecked`, `Description: LAN20 DNS VPN`, then click `Save` and `Apply`.
 
 ### Instance configuration
 
-For this configuration we will use the `[Interface]` section values for filling the instances data. If public key is not included in the configuration file (ovpn.com does not seem to include it) it can be computed with next instruction without leaving any traces of the private key on bash shell:
-
-```bash
-(umask 077; echo "<base64-private-key>" | wg pubkey)
-history -d $((HISTCMD - 1))
-```
-
-Navigate to `VPN - WireGuard - Instances` and click the **+** button to create a new WireGuard instance. Set next values `Name: OVPN_KEY1`, `Public key: config public key`, `Private key: config private key`, `DNS servers: use dns value of configuration file`, `Disable Routes: checked`. **DNS servers can be configured when advanced mode is selected**. Leave rest of values untouched. `Save`. (we will enable WireGuard and apply later).
-
-I am following the next convention for naming the instances: **PROVIDER_KEY-NUMBER**. It will be handy when I need to revoke a key or determine if I am using a key for example.
+Navigate to `VPN - WireGuard - Instances` and click the **+** button to create a new WireGuard instance. Set next values `Name: $NAME$`, `Public key: $PK$`, `Private key: $KEY$`, `Tunnel address: $ADDR$/32`, `DNS servers: $DNS$`, `Disable Routes: checked`. **DNS servers can be configured when advanced mode is selected**. Leave rest of values untouched. `Save`. (we will enable WireGuard and apply later).
 
 ### Peer Configuration
 
-Navigate to `VPN - WireGuard - Peers` and click the **+** button to create the server connection configuration using your `.conf` file `[Peer]` section values. Set the `Name` to `OVPN_KEY1_Peer`, use the `Public Key` value from the `[Peer]` section of your configuration file, and set `Allowed IPs` to `0.0.0.0/0` to avoid any routing limitations at the WireGuard level, allowing OPNsense firewall rules to control all traffic routing decisions. Configure the `Endpoint` using the value from your configuration file and extract the port number for the `Endpoint Port` field. Set `Keepalive Interval` to `25` seconds to maintain connection through NAT devices, and select `OVPN_KEY1` from the `Instance` dropdown to link this peer to your instance. Click `Save` to create the peer configuration.
+Navigate to `VPN - WireGuard - Peers` and click the **+** button to create the server connection configuration. Set `Name: $NAME$_Peer`, `Public Key: $PPK$`, `Allowed IPs: $PIPS$`, `Endpoint address: $PURL$`, `Endpoint Port: $PPORT$`, `Keepalive Interval: 25` (25 seconds to maintain connection through NAT devices) and finally select `$NAME$` from the `Instances` dropdown list to link this peer to your instance. Click `Save` to create the peer configuration.
 
 ### Enable WireGuard Service
 
@@ -65,17 +81,17 @@ Navigate to `VPN - WireGuard`, check **Enable WireGuard** at the bottom of the p
 
 ### Assign WireGuard Interface
 
-Navigate to `Interfaces - Assignments` and assign the WireGuard tunnel as an OPNsense interface. Select the WireGuard interface (e.g., `wg0`) from the dropdown, click the **+** button, and set the description to `OVPN_KEY1`. Click on the newly assigned interface, check **Enable Interface**, set **IPv4 Configuration Type** to `None`, set **IPv6 Configuration Type** to `None`, and click `Save` and `Apply Changes`.
+Navigate to `Interfaces - Assignments` and assign the WireGuard tunnel as an OPNsense interface. Select the WireGuard interface (e.g., `wg0`) from the dropdown, click the **+** button, and set the description to `$NAME$`. Click on the newly assigned interface, check **Enable Interface**, set **IPv4 Configuration Type** to `None`, set **IPv6 Configuration Type** to `None`, and click `Save` and `Apply Changes`.
 
 ### Create Gateway
 
-Navigate to `System - Gateways - Configuration` and click the **+** button to create a static gateway for routing traffic through the VPN tunnel. Set the `Name` to `OVPN_KEY1_GW`, select your WireGuard interface from the `Interface` dropdown, set the `IP Address` to one less than your tunnel IP (if tunnel IP is `172.31.61.210`, use `172.31.61.209`), check **Disable Gateway Monitoring**, and add a description. Click `Save` and `Apply Changes`.
+Navigate to `System - Gateways - Configuration` and click the **+** button to create a static gateway for routing traffic through the VPN tunnel. Set the `Name` to `$NAME$_GW`, select your WireGuard interface from the `Interface` dropdown, set the `IP Address: $ADDRG$`, check **Disable Gateway Monitoring**, and add a description. Click `Save` and `Apply Changes`.
 
 ## Configure Outbound NAT
 
 Navigate to `Firewall - NAT - Outbound` and change the mode from "Automatic outbound NAT rule generation" to "Hybrid outbound NAT rule generation" and click `Save`. This allows manual NAT rules to be processed before automatic rules, enabling specific NAT configuration for VPN traffic.
 
-Click the **+** button to create a manual NAT rule for LAN20 traffic. Set the `Interface` to your WireGuard interface (`OVPN_KEY1`), configure the `Source` as `LAN20 net` to represent the 192.168.20.0/24 network segment, and set the `Destination` to `any` to cover all internet destinations. Set the `Translation target` to your tunnel IP address with `/32` subnet mask (e.g., `172.31.61.210/32`) to ensure that LAN20 traffic appears to originate from your VPN tunnel IP rather than your WAN IP address. Add a descriptive comment like "NAT LAN20 through OVPN tunnel" and click `Save` and `Apply Changes`.
+Click the **+** button to create a manual NAT rule for LAN20 traffic. Set `Interface: $NAME$`, `Source address: LAN20 net`, `Destination address: any`, `Translation target: $NAME$ address` and `Description: "NAT LAN20 through VPN tunnel"` and click `Save` and `Apply Changes`.
 
 This NAT rule ensures that traffic from LAN20 is properly translated to use your VPN tunnel IP address, allowing the traffic to flow correctly through the encrypted VPN connection and receive return traffic from remote servers.
 
@@ -84,11 +100,23 @@ This NAT rule ensures that traffic from LAN20 is properly translated to use your
 Navigate to `Firewall - Rules - LAN20` and add next rules:
 
 - `Action: Pass`, `Interface: Lan20`, `Source: LAN20 net`, `Destination: LAN20 net`, `Description: Allow local access to LAN20 network`.
-- `Action: Pass`, `Interface: Lan20`, `Source: LAN20 net`, `Destination: !192.168.0.0/16`, `Gateway: OVPN_KEY1_GW`, `Description: Route LAN20 traffic through VPN tunnel`
+- `Action: Pass`, `Interface: Lan20`, `Source: LAN20 net`, `Destination: !192.168.0.0/16`, `Gateway: $NAME$_GW`, `Description: Route LAN20 traffic through VPN tunnel`
 - `Action: Pass`, `Interface: Lan20`, `Source: LAN20 net`, `Protocol: ICMP` `Destination: 192.168.99.15/32`, `Description: Allow pinging to host`.
 - `Action: Pass`, `Interface: Lan20`, `Source: LAN20 net`, `Protocol: TCP/UDP` `Destination: 192.168.99.15/32`, `Destination port range: 445 to 445`, `Description: Allow SAMBA access to host`.
 
 Once four rules are created click on `Apply changes`.
+
+## Fix host access
+
+Execute next instruction.
+
+```bash
+sudo nmcli connection modify br-mgmt +ipv4.routes "192.168.20.0/24 192.168.99.1"
+sudo nmcli connection reload
+sudo nmcli device reapply br-mgmt
+```
+
+And remember, if this breaks hosts access to the networks controlled by `opnsense` you will need to switch off `opnsense vm` and then switch it on again (restarting won't work).
 
 
 ## Test the System
@@ -115,11 +143,11 @@ curl ifconfig.me
 
 ## Port Forwarding
 
-This is the last piece we need to implement for completing this chapter. This requires requesting port forwarding from our vpn provider (opvn.com in my case), and setting the corresponding firewall rules one in `NAT` and the other in `LAN20`. I will use `54177`.
+This is the last piece we need to implement for completing this chapter. This requires requesting port forwarding from our vpn provider (opvn.com in my case), and setting the corresponding firewall rules one in `NAT` and the other in `LAN20`. I will use `$FPORT$`.
 
-Navigate to `Firewall - NAT - Port Forward`, and add a new rule with next values: `Interface: OVPN_KEY1`, `Protocol: TCP/UDP`, `Source: any`, `Destination: OVPN_KEY1 address`, `Destination port range: 54177 to 54177`, `Redirect target ip: 192.168.20.5`, `Redirect target port: 54177`, `Reply to: OVPN_DKEY1_GW`, `Description: 192.168.20.5:54177 forwarded`. `Save` and `Apply changes`.
+Navigate to `Firewall - NAT - Port Forward`, and add a new rule with next values: `Interface: $NAME$`, `Protocol: TCP/UDP`, `Source: any`, `Destination: $NAME$ address`, `Destination port range: $FPORT$ to $FPORT$`, `Redirect target ip: 192.168.20.5`, `Redirect target port: $FPORT$`, `Description: 192.168.20.5:$FPORT$ forwarded`. `Save` and `Apply changes`.
 
-Navigate to `Firewall - Rules - OVPN_DKEY1`, delete automatic created rule and add a new rule with next values: `Interface: OVPN_KEY1`, `Protocol: TCP/UDP`, `Source: any`, `Destination: 192.168.20.5`, `Destination port range: 54177 to 54177`, `Reply to: OVPN_DKEY1_GW`, `Description: 192.168.20.5:54177 forwarded`.
+Navigate to `Firewall - Rules - $NAME$`, delete automatic created rule and add a new rule with next values: `Interface: $NAME$`, `Protocol: TCP/UDP`, `Source: any`, `Destination: 192.168.20.5`, `Destination port range: $FPORT$ to $FPORT$`, `Reply to: $NAME$_GW` (**in advanced features**), `Description: 192.168.20.5:$FPORT$ forwarded`.
 
 ## Test Port Forwarding
 
@@ -134,7 +162,7 @@ Restart the VM and verify the new IP assignment by running `ip address` in the V
 Now start a listener on the VM that waits for incoming connections on the forwarded port. Execute:
 
 ```bash
-nc -lvkp 54177
+nc -lvkp $FPORT$
 ```
 
 Leave this terminal open and listening.
@@ -142,13 +170,13 @@ Leave this terminal open and listening.
 Then, from another machine located outside your local network — for example, from the host itself using its direct internet connection run:
 
 ```bash
-nc -vz <vpn-ip-address> 54177
+nc -vz <vpn-ip-address> $FPORT$
 ```
 
 If the connection is successful, it will respond with:
 
 ```
-Connection to <vpn-ip-address> 54177 port [tcp/*] succeeded!
+Connection to <vpn-ip-address> $FPORT$ port [tcp/*] succeeded!
 ```
 
 This confirms that your port forwarding is working correctly end-to-end: from the external network through your VPN provider, into the WireGuard tunnel, through OPNsense, and finally to the intended VM.

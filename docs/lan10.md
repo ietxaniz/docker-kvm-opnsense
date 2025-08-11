@@ -71,9 +71,12 @@ This last failure is expected — and it’s not your fault. It’s caused by ho
 
 ```bash
 sudo nmcli connection modify br-mgmt +ipv4.routes "192.168.10.0/24 192.168.99.1"
-sudo nmcli connection up br-mgmt
+sudo nmcli connection reload
+sudo nmcli device reapply br-mgmt
 ```
 
 This tells the host: “to reach LAN10, go through the OPNsense management interface at `192.168.99.1`.”
 
-Run the ping again — now it will work.
+Run the ping again — now it will hopefully work.
+
+If this breaks access of the host to `opnsense VM`, the likely issue is that `opnsense VM` gets detached from the network when doing this operation. To reattach it you will need to switch off `opnsense VM` and power it on again. Restarting will not work.

@@ -46,3 +46,4 @@ Services → Network Time → General
 In the **Interface** listbox, select only **WAN**. Click **Save**.
 
 This prevents NTP from binding to WireGuard interfaces and allows the service to start normally.
+

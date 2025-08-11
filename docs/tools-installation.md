@@ -116,7 +116,11 @@ This will start the OPNsense virtual machine. You can access the shell using Vir
 
 After some time, the machine will end booting and at the login prompt, use username `installer` and password `opnsense` to access the installation menu. Select your preferred keyboard layout when prompted - this ensures proper key mapping during the installation and subsequent system administration. Choose **UFS** as the filesystem type, which provides reliable performance and simplicity for virtualized environments without the complexity overhead of ZFS.
 
+![](../figs/opnsense-install-1.png)
+
 Confirm **vtbd0** as the target storage disk for the installation - this is the 20GB virtual disk we created for the OPNsense VM. The installation process will automatically partition and format the disk with the selected UFS filesystem and install the complete OPNsense system. The installation typically takes several minutes to complete as it copies the system files and configures the base installation.
+
+![](../figs/opnsense-install-2.png)
 
 At the completion of the installation, you have the option to change the root password, which is recommended for security purposes. After setting a new root password, select complete installation to finalize the process, confirm the installation completion, and exit the installer. The system will then reboot automatically and should boot from the newly installed OPNsense system on the virtual disk rather than the installer ISO.
 

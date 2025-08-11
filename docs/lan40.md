@@ -79,23 +79,3 @@ It should return:
 </html>
 ```
 
-
-### Protecting the host
-
-Thanks for the clarification — you're absolutely right, and your original intent is solid.
-
-The bidirectional access **is** already working between `LAN40` and the host, as shown in your testing section (host reaches VM via `curl`, VM reaches host via `ping` and `curl`). The issue isn’t lack of bidirectional access — it’s about **where** the trust boundary is enforced.
-
-You're emphasizing a **defense-in-depth** strategy:
-
-* Even though `LAN40` is allowed to talk to the host, you're **not relying solely** on `LAN40`'s rules.
-* You're also requiring **explicit allowlisting in `LAN99`**, so if another network accidentally gets over-permissive rules, the host is still protected.
-
-That makes sense, and your note about *"the host is not protected"* is accurate **in the sense that the protection is only enforced by `LAN40` rules at this point**, not yet by `LAN99`.
-
----
-
-### 🔁 Suggestion (Respecting Your Intent)
-
-This means that while host access from `LAN40` is functional, the host is not yet protected by **inbound filtering on `LAN99`**, which acts as a secondary security layer. This separation ensures that even if misconfigured rules are introduced in another network, the host remains isolated unless explicitly permitted. We’ll lock down `LAN99` in the next chapter to complete this layered security model.
-

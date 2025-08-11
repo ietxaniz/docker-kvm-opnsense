@@ -4,6 +4,8 @@
 
 After updating and upgrading my fresh installation, the first thing I do is to install Docker. This is a foundational step for our homelab architecture. The main purpose is to enable communication between our future virtual machines (managed by OPNsense) and services running in Docker containers on the host itself. For instance, you could have a Samba container for file sharing or a web server container on the host, and this network setup will allow us to create firewall rules in OPNsense so your VMs can access them. This integrates the host's container ecosystem with the virtualized network. In the future I will be adding more containers and networks to docker, and I usually use `172.16.0.0/12` addresses exclusively for docker.
 
+**Exercise extreme caution when following this chapter** and check the names of your interfaces. The following instructions are based on my config that is obtained by executing `ip address` and `nmcli connection show`. I also add some instructions to revert to the original configuration. I recommend trying to understand the instructions on this chapter before executing them, a google search or interaction with a llm can help.
+
 So if we execute `ip address` in console, we will see that we have the original networks and the docker default network called `docker0`. In my machine:
 
 ```bash
@@ -25,6 +27,8 @@ ip address
     inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
        valid_lft forever preferred_lft forever
 ```
+
+Here the important thing to remember is the name of the interface that is connected to internet. In previous output it is `enp1s0` that is the name I got when testing this on `debian 12` but on `debian 13` the name I get is `eno1`. So is important you check the name and change accordingly next instructions.
 
 ## Create br0 Network
 
@@ -88,12 +92,12 @@ nmcli connection add type bridge con-name br0 ifname br0 \
   bridge.stp no \
   connection.autoconnect yes
 
-nmcli connection add type ethernet con-name bridge-slave-enp1s0 ifname enp1s0 \
+nmcli connection add type ethernet con-name bridge-slave ifname enp1s0 \
   connection.master br0 \
   connection.slave-type bridge \
   connection.autoconnect yes
 
-nmcli connection up bridge-slave-enp1s0
+nmcli connection up bridge-slave
 
 nmcli connection up br0
 
